@@ -1,8 +1,9 @@
 const std = @import("std");
+const Data = @import("data");
 const GPA = std.heap.GeneralPurposeAllocator;
 
-const test_input = @embedFile("test1.txt");
-const part1_input = @embedFile("input1.txt");
+const test_input = Data.test_input;
+const part1_input = Data.part1_input;
 
 pub fn main() !void {
     var gpa = GPA(.{}){};
@@ -16,15 +17,15 @@ pub fn main() !void {
 }
 
 pub fn part1(data: []const u8, alloc: std.mem.Allocator) !usize {
-    var tokens = std.mem.split(u8, data, "\n\n");
+    var elves = std.mem.split(u8, data, "\n\n");
     var calories = std.ArrayList(usize).init(alloc);
     defer calories.deinit();
 
     var cals: usize = 0;
-    while (tokens.next()) |elf| {
-        var lines = std.mem.tokenize(u8, elf, "\n");
-        while (lines.next()) |food| {
-            var cal: usize = try std.fmt.parseInt(usize, food, 10);
+    while (elves.next()) |elf| {
+        var snacks = std.mem.tokenize(u8, elf, "\n");
+        while (snacks.next()) |snack| {
+            var cal: usize = try std.fmt.parseInt(usize, snack, 10);
             cals += cal;
         }
 

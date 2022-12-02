@@ -1,8 +1,9 @@
 const std = @import("std");
+const Data = @import("data");
 const Allocator = std.mem.Allocator;
 const GPA = std.heap.GeneralPurposeAllocator;
 
-var input = @embedFile("input1.txt");
+const input = Data.input;
 
 pub fn main() !void {
     var res1 = part1(input);
@@ -28,19 +29,19 @@ pub fn part1(data: []const u8) usize {
                 'A' => 1 + 3, // Rock <> Rock
                 'B' => 1 + 0, // Paper <> Rock
                 'C' => 1 + 6, // Scissors <> Rock
-                else => 1,
+                else => 0,
             },
             'Y' => switch (them) {
                 'A' => 2 + 6, // Rock <> Paper
                 'B' => 2 + 3, // Paper <> Paper
                 'C' => 2 + 0, // Scissors <> Paper
-                else => 2,
+                else => 0,
             },
             'Z' => switch (them) {
                 'A' => 3 + 0, // Rock <> Scissors
                 'B' => 3 + 6, // Paper <> Scissors
                 'C' => 3 + 3, // Scissors <> Scissors
-                else => 3,
+                else => 0,
             },
             else => 0,
         };
@@ -71,13 +72,13 @@ pub fn part2(data: []const u8) usize {
                 'A' => 3 + 1, // Draw to Rock
                 'B' => 3 + 2, // Draw to Paper
                 'C' => 3 + 3, // Draw to Scissors
-                else => 3,
+                else => 0,
             },
             'Z' => switch (them) {
                 'A' => 6 + 2, // Win to Rock
                 'B' => 6 + 3, // Win to Paper
                 'C' => 6 + 1, // Win to Scissors
-                else => 6,
+                else => 0,
             },
             else => 0,
         };
