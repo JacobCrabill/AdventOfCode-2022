@@ -14,6 +14,9 @@ const test_input = Data.test_input;
 const part1_input = Data.part1_input;
 const part2_input = Data.part2_input;
 
+const TOTAL_SPACE = 70000000;
+const SPACE_REQUIRED = 30000000;
+
 pub fn main() !void {
     var gpa = GPA(.{}){};
     var alloc = gpa.allocator();
@@ -21,7 +24,7 @@ pub fn main() !void {
     var res1 = try part1(part1_input, alloc);
     std.debug.print("Part1: {d}\n", .{res1});
 
-    var res2 = part2(part2_input, alloc);
+    var res2 = try part2(part1_input, alloc);
     std.debug.print("Part2: {d}\n", .{res2});
 }
 
@@ -51,25 +54,75 @@ pub const Dir = struct {
         self.dirs.deinit();
     }
 
-    pub fn total_size(self: Dir) usize {
+    pub fn totalSize(self: Dir) usize {
         var sum: usize = self.size;
         for (self.dirs.items) |dir| {
-            sum += dir.total_size();
+            sum += dir.totalSize();
         }
         return sum;
     }
 
-    pub fn weird_size_recurse(self: Dir, cur_total: usize) usize {
-        var total: usize = self.total_size();
+    pub fn weirdSizeRecurse(self: Dir, cur_total: usize) usize {
+        var total: usize = self.totalSize();
         if (total > 100000)
             total = 0;
 
         for (self.dirs.items) |dir| {
-            total += dir.weird_size_recurse(cur_total);
+            total += dir.weirdSizeRecurse(cur_total);
         }
         return cur_total + total;
     }
+
+    pub fn getBestToDelete(self: Dir, min_to_delete: usize, cur_best: usize) usize {
+        var new_best = cur_best;
+        if (self.totalSize() >= min_to_delete) {
+            new_best = @min(cur_best, self.totalSize());
+
+            for (self.dirs.items) |dir| {
+                new_best = dir.getBestToDelete(min_to_delete, new_best);
+            }
+        }
+
+        return new_best;
+    }
 };
+
+pub fn parseLog(lines: *std.mem.SplitIterator(u8), root: *Dir, alloc: Allocator) !void {
+    // Store the current working directory
+    var cwd: *Dir = root;
+
+    while (lines.next()) |line| {
+        if (std.mem.startsWith(u8, line, "$ cd ..")) {
+            // Go up a directory
+            cwd = cwd.parent orelse undefined;
+        } else if (std.mem.startsWith(u8, line, "$ cd /")) {
+            // Do nothing
+
+        } else if (std.mem.startsWith(u8, line, "$ cd ")) {
+            const dir = line[5..];
+            for (cwd.dirs.items) |*d| {
+                if (std.mem.eql(u8, dir, d.name)) {
+                    cwd = d;
+                    break;
+                }
+            }
+        } else if (std.mem.startsWith(u8, line, "$ ls")) {
+            // do nothing
+
+        } else if (std.mem.startsWith(u8, line, "dir ")) {
+            const dir = line[4..];
+            try cwd.dirs.append(Dir.init(dir, cwd, alloc));
+        } else if (line.len < 2) {
+            // EOF?
+
+        } else if (std.mem.indexOfScalar(u8, "0123456789", line[0]) != null) {
+            // file
+            var f = std.mem.split(u8, line, " ");
+            const size = try std.fmt.parseInt(usize, f.next() orelse "", 10);
+            cwd.size += size;
+        }
+    }
+}
 
 pub fn part1(data: []const u8, alloc: Allocator) !usize {
     var lines = std.mem.split(u8, data, "\n");
@@ -80,62 +133,10 @@ pub fn part1(data: []const u8, alloc: Allocator) !usize {
 
     var root: Dir = Dir.init(root_dir, undefined, alloc);
 
-    // Store the current working directory
-    var cwd: *Dir = &root;
+    // Parse the input, creating the directory tree
+    try parseLog(&lines, &root, alloc);
 
-    while (lines.next()) |line| {
-        std.debug.print("<<{s}>>\n", .{line});
-        if (std.mem.startsWith(u8, line, "$ cd ..")) {
-            // Go up a directory
-            cwd = cwd.parent orelse undefined;
-        } else if (std.mem.startsWith(u8, line, "$ cd /")) {
-            // Do nothing
-
-        } else if (std.mem.startsWith(u8, line, "$ cd ")) {
-            const dir = line[5..];
-            for (cwd.dirs.items) |*d| {
-                std.debug.print("Compare: '{s}' '{s}'\n", .{ dir, d.name });
-                if (std.mem.eql(u8, dir, d.name)) {
-                    cwd = d;
-                    std.debug.print("  cd {s}\n", .{cwd.name});
-                    break;
-                }
-            }
-        } else if (std.mem.startsWith(u8, line, "$ ls")) {
-            // do nothing
-
-        } else if (std.mem.startsWith(u8, line, "dir ")) {
-            const dir = line[4..];
-            std.debug.print("  Add dir: {s} to {s}\n", .{ dir, cwd.name });
-            try cwd.dirs.append(Dir.init(dir, cwd, alloc));
-        } else if (line.len < 2) {
-            // EOF?
-
-        } else if (std.mem.indexOfScalar(u8, "0123456789", line[0]) != null) {
-            // file
-            var f = std.mem.split(u8, line, " ");
-            const size = try std.fmt.parseInt(usize, f.next() orelse "", 10);
-            cwd.size += size;
-            std.debug.print("  Add {d} bytes to {s}\n", .{ size, cwd.name });
-
-            // The weird bit: Recursively add the size to all parent dirs
-            // var parent = cwd.parent;
-            // while (parent != null) {
-            //     std.debug.print("  -- Add to parent {s}\n", .{parent.?.name});
-            //     parent.?.size += size;
-            //     parent = parent.?.parent;
-            // }
-        }
-    }
-
-    // sum all directories with a size < 1000000
-    //var total: usize = 0;
-    //for (dirmap.items) |*dir| {
-    //    std.debug.print("Found dir {s} with size {d}\n", .{ dir.name, dir.size });
-    //    if (dir.total_size() > 100000) continue;
-    //    total += dir.size;
-    //}
-    const total = root.weird_size_recurse(0);
+    const total = root.weirdSizeRecurse(0);
 
     root.deinit();
 
@@ -145,8 +146,31 @@ pub fn part1(data: []const u8, alloc: Allocator) !usize {
     return total;
 }
 
-pub fn part2(_: []const u8, _: Allocator) usize {
-    return 0;
+pub fn part2(data: []const u8, alloc: Allocator) !usize {
+    var lines = std.mem.split(u8, data, "\n");
+
+    // initialize with root directory we know exists
+    var root_line = lines.next() orelse return 0;
+    const root_dir = root_line[5..];
+
+    var root: Dir = Dir.init(root_dir, undefined, alloc);
+
+    // Parse the input, creating the directory tree
+    try parseLog(&lines, &root, alloc);
+
+    const total_size = root.totalSize();
+    const free_space = TOTAL_SPACE - total_size;
+    const min_to_delete = SPACE_REQUIRED - free_space;
+
+    std.debug.print("\n", .{});
+    std.debug.print("Total Size: {d}\n", .{total_size});
+    std.debug.print("min_to_delete: {d}\n", .{min_to_delete});
+
+    const best_size = root.getBestToDelete(min_to_delete, total_size);
+
+    root.deinit();
+
+    return best_size;
 }
 
 test "part1 test input" {
@@ -157,6 +181,6 @@ test "part1 test input" {
 
 test "part2 test input" {
     var alloc = std.testing.allocator;
-    var res = part2(test_input, alloc);
-    try std.testing.expect(res == 0);
+    var res = try part2(test_input, alloc);
+    try std.testing.expect(res == 24933642);
 }
