@@ -72,13 +72,13 @@ pub fn part1(data: []const u8, alloc: Allocator) !usize {
         }
     }
 
-    for (stacks.items) |_, i| {
-        std.debug.print("{c}", .{stacks.items[i].pop()});
+    for (stacks.items) |*stack| {
+        std.debug.print("{c}", .{stack.pop()});
     }
     std.debug.print("\n", .{});
 
-    for (stacks.items) |_, i| {
-        stacks.items[i].deinit();
+    for (stacks.items) |*stack| {
+        stack.deinit();
     }
     stacks.deinit();
 
@@ -115,13 +115,13 @@ pub fn part2(data: []const u8, alloc: Allocator) !usize {
         tmp.deinit();
     }
 
-    for (stacks.items) |_, i| {
-        std.debug.print("{c}", .{stacks.items[i].pop()});
+    for (stacks.items) |*stack| {
+        std.debug.print("{c}", .{stack.pop()});
     }
     std.debug.print("\n", .{});
 
-    for (stacks.items) |_, i| {
-        stacks.items[i].deinit();
+    for (stacks.items) |*stack| {
+        stack.deinit();
     }
     stacks.deinit();
 
