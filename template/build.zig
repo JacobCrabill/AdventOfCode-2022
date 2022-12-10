@@ -15,6 +15,7 @@ pub fn build(b: *std.build.Builder) void {
     exe.setTarget(target);
     exe.setBuildMode(mode);
     exe.addPackagePath("data", "data/data.zig");
+    exe.addPackagePath("utils", "../common/utils.zig");
     exe.install();
 
     const run_cmd = exe.run();
@@ -30,6 +31,7 @@ pub fn build(b: *std.build.Builder) void {
     exe_tests.setTarget(target);
     exe_tests.setBuildMode(mode);
     exe_tests.addPackagePath("data", "data/data.zig");
+    exe_tests.addPackagePath("utils", "../common/utils.zig");
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&exe_tests.step);
