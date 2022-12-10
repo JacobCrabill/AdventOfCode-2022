@@ -11,8 +11,8 @@ const part1_input = Data.part1_input;
 const part2_input = Data.part1_input;
 
 pub const Pos = struct {
-    x: i64,
-    y: i64,
+    x: i64 = 0,
+    y: i64 = 0,
 };
 
 pub const PosSet = utils.Set(Pos);
@@ -28,6 +28,7 @@ pub fn main() !void {
     std.debug.print("Part2: {d}\n", .{res2});
 }
 
+// Single-Tail Functions ==============================================
 pub fn follow(h: Pos, t: *Pos) void {
     const dx: i64 = h.x - t.x;
     const dy: i64 = h.y - t.y;
@@ -65,6 +66,35 @@ pub fn moveDown(h: *Pos, t: *Pos) void {
     follow(h.*, t);
 
     std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
+}
+
+// Multi-Tail Functions ==============================================
+pub fn followArr(h: Pos, t: []Pos) void {
+    follow(h, &t[0]);
+
+    var i: usize = 0;
+    while (i < t.len - 1) : (i += 1) {
+        follow(t[i], &t[i + 1]);
+    }
+}
+
+pub fn moveRightArr(h: *Pos, t: []Pos) void {
+    h.x += 1;
+    followArr(h.*, t);
+}
+
+pub fn moveLeftArr(h: *Pos, t: []Pos) void {
+    h.x -= 1;
+    followArr(h.*, t);
+}
+
+pub fn moveUpArr(h: *Pos, t: []Pos) void {
+    h.y += 1;
+    followArr(h.*, t);
+}
+pub fn moveDownArr(h: *Pos, t: []Pos) void {
+    h.y -= 1;
+    followArr(h.*, t);
 }
 
 pub fn part1(data: []const u8, alloc: Allocator) !usize {
@@ -113,32 +143,30 @@ pub fn part2(data: []const u8, alloc: Allocator) !usize {
         .x = 0,
         .y = 0,
     };
-    var tpos = Pos{
-        .x = 0,
-        .y = 0,
-    };
+    var tarr = [_]Pos{Pos{}} ** 9;
+    var tails: []Pos = tarr[0..9];
 
     var seen = PosSet.init(alloc);
     defer seen.deinit();
 
-    const FnType: type = fn (*Pos, *Pos) void;
+    const FnType: type = fn (*Pos, []Pos) void;
 
     while (lines.next()) |line| {
         if (line.len < 3) break;
         std.debug.print("{s}, '{c}'\n", .{ line, line[0] });
         const n: i64 = try std.fmt.parseInt(i64, line[2..], 10);
         const func: *const FnType = switch (line[0]) {
-            'R' => moveRight,
-            'L' => moveLeft,
-            'U' => moveUp,
-            'D' => moveDown,
+            'R' => moveRightArr,
+            'L' => moveLeftArr,
+            'U' => moveUpArr,
+            'D' => moveDownArr,
             else => continue,
         };
 
         var i: i64 = 0;
         while (i < n) : (i += 1) {
-            func(&hpos, &tpos);
-            try seen.put(tpos);
+            func(&hpos, tails);
+            try seen.put(tails[8]);
         }
     }
 
