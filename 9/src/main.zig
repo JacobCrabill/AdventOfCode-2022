@@ -45,27 +45,27 @@ pub fn moveRight(h: *Pos, t: *Pos) void {
     h.x += 1;
     follow(h.*, t);
 
-    std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
+    // std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
 }
 
 pub fn moveLeft(h: *Pos, t: *Pos) void {
     h.x -= 1;
     follow(h.*, t);
 
-    std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
+    // std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
 }
 
 pub fn moveUp(h: *Pos, t: *Pos) void {
     h.y += 1;
     follow(h.*, t);
 
-    std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
+    // std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
 }
 pub fn moveDown(h: *Pos, t: *Pos) void {
     h.y -= 1;
     follow(h.*, t);
 
-    std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
+    // std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
 }
 
 // Multi-Tail Functions ==============================================
@@ -116,7 +116,7 @@ pub fn part1(data: []const u8, alloc: Allocator) !usize {
 
     while (lines.next()) |line| {
         if (line.len < 3) break;
-        std.debug.print("{s}, '{c}'\n", .{ line, line[0] });
+        // std.debug.print("{s}, '{c}'\n", .{ line, line[0] });
         const n: i64 = try std.fmt.parseInt(i64, line[2..], 10);
         const func: *const FnType = switch (line[0]) {
             'R' => moveRight,
@@ -153,7 +153,7 @@ pub fn part2(data: []const u8, alloc: Allocator) !usize {
 
     while (lines.next()) |line| {
         if (line.len < 3) break;
-        std.debug.print("{s}, '{c}'\n", .{ line, line[0] });
+        // std.debug.print("{s}, '{c}'\n", .{ line, line[0] });
         const n: i64 = try std.fmt.parseInt(i64, line[2..], 10);
         const func: *const FnType = switch (line[0]) {
             'R' => moveRightArr,
@@ -182,5 +182,5 @@ test "part1 test input" {
 test "part2 test input" {
     var alloc = std.testing.allocator;
     var res = try part2(test_input, alloc);
-    try std.testing.expect(res == 0);
+    try std.testing.expect(res == 1);
 }
