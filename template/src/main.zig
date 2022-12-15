@@ -6,17 +6,16 @@ const Allocator = std.mem.Allocator;
 const GPA = std.heap.GeneralPurposeAllocator;
 
 const test_input = Data.test_input;
-const part1_input = Data.part1_input;
-const part2_input = Data.part2_input;
+const input = Data.input;
 
 pub fn main() !void {
     var gpa = GPA(.{}){};
     var alloc = gpa.allocator();
 
-    var res1 = try part1(part1_input, alloc);
+    var res1 = try part1(input, alloc);
     std.debug.print("Part1: {d}\n", .{res1});
 
-    var res2 = try part2(part2_input, alloc);
+    var res2 = try part2(input, alloc);
     std.debug.print("Part2: {d}\n", .{res2});
 }
 

@@ -1,5 +1,8 @@
 const std = @import("std");
 
+const data = std.build.Pkg{ .name = "data", .source = .{ .path = "data/data.zig" } };
+const utils = std.build.Pkg{ .name = "utils", .source = .{ .path = "common/utils.zig" } };
+
 pub fn build(b: *std.build.Builder) void {
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
@@ -14,8 +17,8 @@ pub fn build(b: *std.build.Builder) void {
     const exe = b.addExecutable("dayX", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
-    exe.addPackagePath("data", "data/data.zig");
-    exe.addPackagePath("utils", "../common/utils.zig");
+    exe.addPackage(data);
+    exe.addPackage(utils);
     exe.install();
 
     const run_cmd = exe.run();
@@ -30,8 +33,8 @@ pub fn build(b: *std.build.Builder) void {
     const exe_tests = b.addTest("src/main.zig");
     exe_tests.setTarget(target);
     exe_tests.setBuildMode(mode);
-    exe_tests.addPackagePath("data", "data/data.zig");
-    exe_tests.addPackagePath("utils", "../common/utils.zig");
+    exe_tests.addPackage(data);
+    exe_tests.addPackage(utils);
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&exe_tests.step);
