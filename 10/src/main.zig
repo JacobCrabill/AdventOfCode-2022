@@ -81,9 +81,9 @@ pub fn doCycle(cycle: *usize, X: i64) void {
     if (px == 0) std.debug.print("\n", .{});
 
     if (std.math.absCast(X - px) <= 1) {
-        std.debug.print("#", .{});
+        std.debug.print("##", .{});
     } else {
-        std.debug.print(".", .{});
+        std.debug.print("  ", .{});
     }
     cycle.* += 1;
 }
