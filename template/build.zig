@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const data = std.build.Pkg{ .name = "data", .source = .{ .path = "data/data.zig" } };
-const utils = std.build.Pkg{ .name = "utils", .source = .{ .path = "common/utils.zig" } };
+const utils = std.build.Pkg{ .name = "utils", .source = .{ .path = "../common/utils.zig" } };
 
 pub fn build(b: *std.build.Builder) void {
     // Standard target options allows the person running `zig build` to choose
