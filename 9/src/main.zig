@@ -8,7 +8,6 @@ const abs = std.math.absCast;
 
 const test_input = Data.test_input;
 const part1_input = Data.part1_input;
-const part2_input = Data.part1_input;
 
 pub const Pos = struct {
     x: i64 = 0,
@@ -24,8 +23,20 @@ pub fn main() !void {
     var res1 = try part1(part1_input, alloc);
     std.debug.print("Part1: {d}\n", .{res1});
 
-    var res2 = try part2(part2_input, alloc);
+    var res2 = try part2(part1_input, alloc);
     std.debug.print("Part2: {d}\n", .{res2});
+}
+
+test "part1 test input" {
+    var alloc = std.testing.allocator;
+    var res = try part1(test_input, alloc);
+    try std.testing.expect(res == 13);
+}
+
+test "part2 test input" {
+    var alloc = std.testing.allocator;
+    var res = try part2(test_input, alloc);
+    try std.testing.expect(res == 1);
 }
 
 // Single-Tail Functions ==============================================
@@ -44,28 +55,20 @@ pub fn follow(h: Pos, t: *Pos) void {
 pub fn moveRight(h: *Pos, t: *Pos) void {
     h.x += 1;
     follow(h.*, t);
-
-    // std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
 }
 
 pub fn moveLeft(h: *Pos, t: *Pos) void {
     h.x -= 1;
     follow(h.*, t);
-
-    // std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
 }
 
 pub fn moveUp(h: *Pos, t: *Pos) void {
     h.y += 1;
     follow(h.*, t);
-
-    // std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
 }
 pub fn moveDown(h: *Pos, t: *Pos) void {
     h.y -= 1;
     follow(h.*, t);
-
-    // std.debug.print("New loc: H({d},{d}), T({d},{d})\n", .{ h.x, h.y, t.x, t.y });
 }
 
 // Multi-Tail Functions ==============================================
@@ -171,16 +174,4 @@ pub fn part2(data: []const u8, alloc: Allocator) !usize {
     }
 
     return seen.count();
-}
-
-test "part1 test input" {
-    var alloc = std.testing.allocator;
-    var res = try part1(test_input, alloc);
-    try std.testing.expect(res == 13);
-}
-
-test "part2 test input" {
-    var alloc = std.testing.allocator;
-    var res = try part2(test_input, alloc);
-    try std.testing.expect(res == 1);
 }
