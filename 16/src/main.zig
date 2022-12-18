@@ -1,6 +1,7 @@
 const std = @import("std");
 const Data = @import("data");
 const utils = @import("utils");
+const part2 = @import("part2.zig").part2;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
@@ -37,7 +38,7 @@ test "part2 test input" {
     var alloc = std.testing.allocator;
     var res = try part2(test_input, alloc);
     std.debug.print("[Test] Part 2: {d}\n", .{res});
-    try std.testing.expect(res == 0);
+    try std.testing.expect(res == 1707);
 }
 
 // ------------ Part 1 Solution ------------
@@ -87,12 +88,6 @@ pub fn part1(data: []const u8, alloc: Allocator) !usize {
     }
 
     return score;
-}
-
-// ------------ Part 2 Solution ------------
-
-pub fn part2(_: []const u8, _: Allocator) !usize {
-    return 0;
 }
 
 // ------------ Common Functions ------------
