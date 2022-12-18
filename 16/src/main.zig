@@ -49,9 +49,6 @@ pub fn part1(data: []const u8, alloc: Allocator) !usize {
     var n2i = StringHashMap(usize).init(alloc);
     defer n2i.deinit();
 
-    // Start our name2index map with AA
-    try n2i.put("AA", 0);
-
     // Parse input
     var lines = std.mem.split(u8, data, "\n");
     var idx: usize = 0;
@@ -82,7 +79,7 @@ pub fn part1(data: []const u8, alloc: Allocator) !usize {
         }
     }
 
-    var score: usize = try traverseRooms(rooms, alloc);
+    var score: usize = try traverseRooms(rooms, alloc, n2i.get("AA").?);
 
     // Cleanup
     for (rooms.items) |*room| {
@@ -123,12 +120,12 @@ pub const Room = struct {
     }
 };
 
-fn traverseRooms(rooms: ArrayList(Room), alloc: Allocator) !usize {
+fn traverseRooms(rooms: ArrayList(Room), alloc: Allocator, start: usize) !usize {
     var cache = Cache.init(alloc);
     defer cache.deinit();
 
     var valves: BitSet = BitSet.initEmpty(); // Number of valves in input
-    var score: usize = try recurse(rooms, &cache, valves, 0, 0, 0, 1);
+    var score: usize = try recurse(rooms, &cache, valves, start, 0, 0, 1);
     return score;
 }
 
@@ -146,7 +143,7 @@ fn recurse(rooms: ArrayList(Room), cache: *Cache, open_valves: BitSet, ridx: usi
     var new_score: usize = score + flowrate;
 
     // Check the cache for this setup
-    const stats = Stats{ .minute = minute, .room = ridx, .score = score, .open_valves = open_valves };
+    const stats = Stats{ .minute = minute, .room = ridx, .score = new_score, .open_valves = open_valves };
     var cached_score = cache.get(stats);
     if (cached_score != null) {
         return cached_score.?;
