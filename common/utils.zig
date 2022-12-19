@@ -54,6 +54,10 @@ pub fn Set(comptime keytype: type) type {
             return self.map.remove(key);
         }
 
+        pub fn iterator(self: *Self) MapType.Iterator {
+            return self.map.iterator();
+        }
+
         // Alias for remove
         pub fn pop(self: *Self, key: Key) bool {
             return self.remove(key);

@@ -43,7 +43,6 @@ test "part2 test input" {
 pub fn part1(data: []const u8, alloc: Allocator) !usize {
     var nums = std.mem.tokenize(u8, data, ",\n");
 
-    //var cubes = ArrayList(Pos).init(alloc);
     var cubes = AutoHashMap(Pos, void).init(alloc);
     defer cubes.deinit();
 

@@ -25,12 +25,14 @@ pub fn main() !void {
 test "part1 test input" {
     var alloc = std.testing.allocator;
     var res = try part1(test_input, alloc);
+    std.debug.print("[Test] Part 1: {d}\n", .{res});
     try std.testing.expect(res == 0);
 }
 
 test "part2 test input" {
     var alloc = std.testing.allocator;
     var res = try part2(test_input, alloc);
+    std.debug.print("[Test] Part 2: {d}\n", .{res});
     try std.testing.expect(res == 0);
 }
 
