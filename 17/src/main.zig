@@ -4,6 +4,7 @@ const utils = @import("utils");
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+const AutoHashMap = std.AutoHashMap;
 const GPA = std.heap.GeneralPurposeAllocator;
 const ns2sec = utils.ns2sec;
 const Timer = utils.Timer;
@@ -11,9 +12,9 @@ const Timer = utils.Timer;
 const test_input = Data.test_input;
 const input = Data.input;
 
-const WIDTH: usize = 7;
-const N_PART1: usize = 2022;
-const N_PART2: usize = 1000000000000;
+const WIDTH: u64 = 7;
+const N_PART1: u64 = 2022;
+const N_PART2: u64 = 1000000000000;
 
 pub fn main() !void {
     var gpa = GPA(.{}){};
@@ -21,9 +22,9 @@ pub fn main() !void {
 
     var T = try Timer();
 
-    var res1 = try part1(input, alloc);
-    std.debug.print("Part1: {d}\n", .{res1});
-    std.debug.print("Part 1 took {d:.6}s\n", .{ns2sec(T.lap())});
+    // var res1 = try part1(input, alloc);
+    // std.debug.print("Part1: {d}\n", .{res1});
+    // std.debug.print("Part 1 took {d:.6}s\n", .{ns2sec(T.lap())});
 
     var res2 = try part2(input, alloc);
     std.debug.print("Part2: {d}\n", .{res2});
@@ -32,7 +33,7 @@ pub fn main() !void {
 
 // ------------ Tests ------------
 
-test "part1 test input" {
+test "part1 test input\n" {
     var alloc = std.testing.allocator;
     var res = try part1(test_input, alloc);
     std.debug.print("[Test] Part 1: {d}\n", .{res});
@@ -43,28 +44,35 @@ test "part2 test input" {
     var alloc = std.testing.allocator;
     var res = try part2(test_input, alloc);
     std.debug.print("[Test] Part 2: {d}\n", .{res});
-    try std.testing.expect(res == 0);
+    try std.testing.expect(res == 1514285714288);
 }
 
 // ------------ Part 1 Solution ------------
 
-pub fn part1(data: []const u8, alloc: Allocator) !usize {
+pub fn part1(data: []const u8, alloc: Allocator) !u64 {
     // Initialize our grid to the max height we could get
     // (2022 blocks stacked on top of each other, none side-by-side)
     var grid = try ArrayList(u1).initCapacity(alloc, WIDTH * 13 * N_PART1);
     defer grid.deinit();
     try grid.appendNTimes(0, WIDTH * 13 * N_PART1);
 
+    std.debug.print("data.len = {d}\n", .{data.len});
     var block: Block = Block.Row;
-    var x: usize = 2;
-    var y: usize = 3;
-    var max_y: usize = 3;
+    var x: u64 = 2;
+    var y: u64 = 3;
+    var max_y: u64 = 0;
+    var prev_maxy: u64 = 0;
 
     // printGrid(grid, max_y);
-    var i: usize = 0;
-    var bid: usize = 0;
+    var i: u64 = 0;
+    var bid: u64 = 0;
     while (bid < N_PART1) {
-        const c: u8 = data[i % data.len];
+        if (i % (data.len - 2) == 0) {
+            // std.debug.print("{any} | {d}: prev/max-y {d}, {d} delta: {d}\n", .{ block, i, prev_maxy, max_y, max_y - prev_maxy });
+            prev_maxy = max_y;
+        }
+
+        const c: u8 = data[i % (data.len - 1)]; // last char is '\n'
         i += 1;
         switch (c) {
             '>' => {
@@ -102,24 +110,28 @@ pub fn part1(data: []const u8, alloc: Allocator) !usize {
 
 // ------------ Part 2 Solution ------------
 
-pub fn part2(data: []const u8, alloc: Allocator) !usize {
+pub fn part2(data: []const u8, alloc: Allocator) !u64 {
     // Initialize our grid to the max height we could get
-    const GRID_HEIGHT = data.len + 100;
-    const RESET_Y = data.len;
+    const GRID_HEIGHT = data.len * 100;
     var grid = try ArrayList(u1).initCapacity(alloc, WIDTH * 13 * GRID_HEIGHT);
     defer grid.deinit();
     try grid.appendNTimes(0, WIDTH * 13 * GRID_HEIGHT);
 
-    var block: Block = Block.Row;
-    var x: usize = 2;
-    var y: usize = 3;
-    var max_y: usize = 3;
-    var y_offset: usize = 0;
+    var cache = AutoHashMap(Config, Status).init(alloc);
+    defer cache.deinit();
 
-    var i: usize = 0;
-    var bid: usize = 0;
-    while (bid < 10 * data.len) {
-        const c: u8 = data[i % data.len];
+    var block: Block = Block.Row;
+    var x: u64 = 2;
+    var y: u64 = 3;
+    var max_y: u64 = 1;
+    var jump_offset: u64 = 0;
+    var jumped: bool = false;
+
+    var bid_limit: u64 = N_PART2;
+    var i: u64 = 0;
+    var bid: u64 = 0;
+    while (bid < bid_limit) {
+        const c: u8 = data[i % (data.len - 1)];
         i += 1;
         switch (c) {
             '>' => {
@@ -141,24 +153,50 @@ pub fn part2(data: []const u8, alloc: Allocator) !usize {
             x = 2;
             block.next();
             bid += 1;
-            if (bid % data.len == 0) {
-                std.debug.print("height: {d}\n", .{max_y});
-            }
+
             if (bid % 1000000 == 0) {
                 std.debug.print("--{d}\n", .{bid});
             }
 
-            // Update the offset reset y and max_y, and reset the grid
-            // (Copy top rows to bottom of grid)
-            if (y > GRID_HEIGHT - 10) {
-                y_offset += RESET_Y;
-                y -= RESET_Y;
-                resetGrid(&grid, RESET_Y, GRID_HEIGHT);
+            // Check the cache to see if we've found the pattern yet
+            if (!jumped) {
+                const fill: u8 = getRowfill(grid, max_y - 1);
+                var config = Config{
+                    .idx = i % (data.len - 1),
+                    .block = block,
+                    .top = fill,
+                };
+
+                if (cache.contains(config)) {
+                    const pres: Status = cache.get(config).?;
+                    const delta: u64 = max_y - pres.maxy;
+                    const dbid: u64 = bid - pres.bid;
+                    std.debug.print("Cache hit! {any}, {any}\n", .{ config, pres });
+
+                    // Now we can jump ahead to the end!  ...Almost
+                    // Each interval adds 'delta' to the stack; we need N_PART2
+                    // We can jump ahead M intervals to then finish it off
+                    // (we actually just keep going in our current grid, but store the
+                    // intervening height to apply at the end)
+                    const M = @divFloor(N_PART2 - bid, dbid);
+                    std.debug.print("Jumping ahead {d} blocks times {d}\n", .{ M, dbid });
+                    std.debug.print("Delta-height: {d}, new height: {d}\n", .{ delta, M * delta + max_y });
+                    // bid += M * dbid;
+                    bid_limit -= M * dbid;
+                    jump_offset = M * delta;
+                    jumped = true;
+                } else {
+                    const status = Status{
+                        .bid = bid,
+                        .maxy = max_y,
+                    };
+                    try cache.put(config, status);
+                }
             }
         }
     }
 
-    return max_y + y_offset;
+    return max_y + jump_offset;
 }
 
 // ------------ Common Functions ------------
@@ -212,7 +250,7 @@ const Block = enum(u8) {
         };
     }
 
-    pub fn at(self: Block, x: usize, y: usize) bool {
+    pub fn at(self: Block, x: u64, y: u64) bool {
         const data = switch (self) {
             .Row => row_fill,
             .Plus => plus_fill,
@@ -224,7 +262,7 @@ const Block = enum(u8) {
     }
 
     // Return the right-most column of this block
-    pub fn right(self: Block) usize {
+    pub fn right(self: Block) u64 {
         return switch (self) {
             .Row => 3,
             .Plus => 2,
@@ -235,7 +273,18 @@ const Block = enum(u8) {
     }
 };
 
-fn tickLeft(grid: ArrayList(u1), block: Block, x: *usize, y: usize) void {
+const Config = struct {
+    idx: u64 = 0,
+    block: Block = Block.Row,
+    top: u8 = 0, // Bitmask for the top row empty/block config
+};
+
+const Status = struct {
+    bid: u64 = 0,
+    maxy: u64 = 0,
+};
+
+fn tickLeft(grid: ArrayList(u1), block: Block, x: *u64, y: u64) void {
     if (x.* == 0) return; // Nothing to do
 
     // Move left if not blocked
@@ -245,7 +294,7 @@ fn tickLeft(grid: ArrayList(u1), block: Block, x: *usize, y: usize) void {
     }
 }
 
-fn tickRight(grid: ArrayList(u1), block: Block, x: *usize, y: usize) void {
+fn tickRight(grid: ArrayList(u1), block: Block, x: *u64, y: u64) void {
     if (x.* + block.right() >= WIDTH - 1) return; // Nothing to do
 
     // Move right if not blocked
@@ -256,7 +305,7 @@ fn tickRight(grid: ArrayList(u1), block: Block, x: *usize, y: usize) void {
 }
 
 // Return 'true' if the block moved, else 'false' if it landed
-fn tickDown(grid: ArrayList(u1), block: Block, x: usize, y: *usize) bool {
+fn tickDown(grid: ArrayList(u1), block: Block, x: u64, y: *u64) bool {
     if (y.* == 0) return false;
     // std.debug.print("{any} {d},{d}\n", .{ block, x, y.* });
 
@@ -269,11 +318,11 @@ fn tickDown(grid: ArrayList(u1), block: Block, x: usize, y: *usize) bool {
     return false;
 }
 
-fn fillBlock(grid: *ArrayList(u1), block: Block, x: usize, y: usize) void {
-    var j: usize = 0;
+fn fillBlock(grid: *ArrayList(u1), block: Block, x: u64, y: u64) void {
+    var j: u64 = 0;
     while (j < 4) : (j += 1) {
         const yy = y + j;
-        var i: usize = 0;
+        var i: u64 = 0;
         while (i < 4) : (i += 1) {
             const xx = x + i;
             if (xx >= WIDTH) break;
@@ -284,12 +333,12 @@ fn fillBlock(grid: *ArrayList(u1), block: Block, x: usize, y: usize) void {
     }
 }
 
-fn occupied(grid: ArrayList(u1), block: Block, x: usize, y: usize) bool {
+fn occupied(grid: ArrayList(u1), block: Block, x: u64, y: u64) bool {
     // Check if a block of the given type placed at (x, y) overlaps an existing block
-    var j: usize = 0;
+    var j: u64 = 0;
     while (j < 4) : (j += 1) {
         const yy = y + j;
-        var i: usize = 0;
+        var i: u64 = 0;
         while (i < 4) : (i += 1) {
             const xx = x + i;
             if (xx >= WIDTH) continue;
@@ -303,11 +352,11 @@ fn occupied(grid: ArrayList(u1), block: Block, x: usize, y: usize) bool {
     return false;
 }
 
-fn topRow(grid: ArrayList(u1), start_y: usize) usize {
-    var j: usize = 0;
+fn topRow(grid: ArrayList(u1), start_y: u64) u64 {
+    var j: u64 = 0;
     yloop: while (true) : (j += 1) {
         var y = j + start_y;
-        var x: usize = 0;
+        var x: u64 = 0;
         while (x < WIDTH) : (x += 1) {
             if (grid.items[x + WIDTH * y] == 1) {
                 continue :yloop;
@@ -319,13 +368,25 @@ fn topRow(grid: ArrayList(u1), start_y: usize) usize {
     }
 }
 
-fn printGrid(grid: ArrayList(u1), max_y: usize) void {
+fn getRowfill(grid: ArrayList(u1), y: u64) u8 {
+    var fill: u8 = 0;
+    var i: u3 = 0;
+    while (i < 7) : (i += 1) {
+        if (grid.items[i + WIDTH * y] > 0) {
+            fill |= (@intCast(u8, 1) << i);
+        }
+    }
+
+    return fill;
+}
+
+fn printGrid(grid: ArrayList(u1), max_y: u64) void {
     var y: i64 = @intCast(i64, max_y);
     while (y >= 0) : (y -= 1) {
-        var x: usize = 0;
-        std.debug.print("{d:4} |", .{y});
+        var x: u64 = 0;
+        std.debug.print("{d:4} |", .{y + 1});
         while (x < WIDTH) : (x += 1) {
-            const iy: usize = @intCast(usize, y);
+            const iy: u64 = @intCast(u64, y);
             var val = grid.items[x + WIDTH * iy];
             if (val == 1) {
                 std.debug.print("#", .{});
@@ -336,19 +397,4 @@ fn printGrid(grid: ArrayList(u1), max_y: usize) void {
         std.debug.print("|\n", .{});
     }
     std.debug.print("---------\n", .{});
-}
-
-fn resetGrid(grid: *ArrayList(u1), shift: usize, max_y: usize) void {
-    const dy: usize = max_y - shift;
-    var y: usize = 0;
-    while (y < max_y) : (y += 1) {
-        var x: usize = 0;
-        while (x < WIDTH) : (x += 1) {
-            if (y < dy) {
-                grid.items[x + WIDTH * y] = grid.items[x + WIDTH * (y + shift)];
-            } else {
-                grid.items[x + WIDTH * y] = 0;
-            }
-        }
-    }
 }
