@@ -15,6 +15,7 @@ const input = Data.input;
 const WIDTH: u64 = 7;
 const N_PART1: u64 = 2022;
 const N_PART2: u64 = 1000000000000;
+const BLOCK_HEIGHT_SUM: u64 = 13; // Height of all block types stacked up
 
 pub fn main() !void {
     var gpa = GPA(.{}){};
@@ -52,9 +53,9 @@ test "part2 test input" {
 pub fn part1(data: []const u8, alloc: Allocator) !u64 {
     // Initialize our grid to the max height we could get
     // (2022 blocks stacked on top of each other, none side-by-side)
-    var grid = try ArrayList(u1).initCapacity(alloc, WIDTH * 13 * N_PART1);
+    var grid = try ArrayList(u1).initCapacity(alloc, WIDTH * BLOCK_HEIGHT_SUM * N_PART1);
     defer grid.deinit();
-    try grid.appendNTimes(0, WIDTH * 13 * N_PART1);
+    try grid.appendNTimes(0, WIDTH * BLOCK_HEIGHT_SUM * N_PART1);
 
     std.debug.print("data.len = {d}\n", .{data.len});
     var block: Block = Block.Row;
@@ -112,10 +113,10 @@ pub fn part1(data: []const u8, alloc: Allocator) !u64 {
 
 pub fn part2(data: []const u8, alloc: Allocator) !u64 {
     // Initialize our grid to the max height we could get
-    const GRID_HEIGHT = data.len * 100;
-    var grid = try ArrayList(u1).initCapacity(alloc, WIDTH * 13 * GRID_HEIGHT);
+    const GRID_HEIGHT = data.len * 20;
+    var grid = try ArrayList(u1).initCapacity(alloc, WIDTH * BLOCK_HEIGHT_SUM * GRID_HEIGHT);
     defer grid.deinit();
-    try grid.appendNTimes(0, WIDTH * 13 * GRID_HEIGHT);
+    try grid.appendNTimes(0, WIDTH * BLOCK_HEIGHT_SUM * GRID_HEIGHT);
 
     var cache = AutoHashMap(Config, Status).init(alloc);
     defer cache.deinit();
@@ -131,8 +132,8 @@ pub fn part2(data: []const u8, alloc: Allocator) !u64 {
     var i: u64 = 0;
     var bid: u64 = 0;
     while (bid < bid_limit) {
-        const c: u8 = data[i % (data.len - 1)];
-        i += 1;
+        const c: u8 = data[i];
+        i = @mod(i + 1, data.len - 1);
         switch (c) {
             '>' => {
                 tickRight(grid, block, &x, y);
@@ -154,17 +155,13 @@ pub fn part2(data: []const u8, alloc: Allocator) !u64 {
             block.next();
             bid += 1;
 
-            if (bid % 1000000 == 0) {
-                std.debug.print("--{d}\n", .{bid});
-            }
-
-            // Check the cache to see if we've found the pattern yet
             if (!jumped) {
-                const fill: u8 = getRowfill(grid, max_y - 1);
+                // Check the cache to see if we've found the pattern yet
+                const topo = getTopoMap(grid, max_y - 1);
                 var config = Config{
-                    .idx = i % (data.len - 1),
+                    .idx = i,
                     .block = block,
-                    .top = fill,
+                    .topo = topo,
                 };
 
                 if (cache.contains(config)) {
@@ -181,7 +178,6 @@ pub fn part2(data: []const u8, alloc: Allocator) !u64 {
                     const M = @divFloor(N_PART2 - bid, dbid);
                     std.debug.print("Jumping ahead {d} blocks times {d}\n", .{ M, dbid });
                     std.debug.print("Delta-height: {d}, new height: {d}\n", .{ delta, M * delta + max_y });
-                    // bid += M * dbid;
                     bid_limit -= M * dbid;
                     jump_offset = M * delta;
                     jumped = true;
@@ -276,7 +272,7 @@ const Block = enum(u8) {
 const Config = struct {
     idx: u64 = 0,
     block: Block = Block.Row,
-    top: u8 = 0, // Bitmask for the top row empty/block config
+    topo: [7]u8 = [1]u8{255} ** 7, // Block stack depth map below current max_y
 };
 
 const Status = struct {
@@ -307,7 +303,6 @@ fn tickRight(grid: ArrayList(u1), block: Block, x: *u64, y: u64) void {
 // Return 'true' if the block moved, else 'false' if it landed
 fn tickDown(grid: ArrayList(u1), block: Block, x: u64, y: *u64) bool {
     if (y.* == 0) return false;
-    // std.debug.print("{any} {d},{d}\n", .{ block, x, y.* });
 
     const new_y = y.* - 1;
     if (!occupied(grid, block, x, new_y)) {
@@ -368,16 +363,23 @@ fn topRow(grid: ArrayList(u1), start_y: u64) u64 {
     }
 }
 
-fn getRowfill(grid: ArrayList(u1), y: u64) u8 {
-    var fill: u8 = 0;
+fn getTopoMap(grid: ArrayList(u1), y: u64) [7]u8 {
+    // Starting y == 0
+    // Scan left to right
+    // Store 'depth' (below y) of first block found
     var i: u3 = 0;
-    while (i < 7) : (i += 1) {
-        if (grid.items[i + WIDTH * y] > 0) {
-            fill |= (@intCast(u8, 1) << i);
+    var out = [1]u8{255} ** 7;
+    while (i < WIDTH) : (i += 1) {
+        var j: u8 = 0;
+        depth: while (j < 50 and j < y) : (j += 1) {
+            if (grid.items[i + WIDTH * (y - j)] > 0) {
+                out[i] = j;
+                break :depth;
+            }
         }
     }
 
-    return fill;
+    return out;
 }
 
 fn printGrid(grid: ArrayList(u1), max_y: u64) void {
