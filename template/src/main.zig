@@ -5,6 +5,7 @@ const utils = @import("utils");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const GPA = std.heap.GeneralPurposeAllocator;
+const ns2sec = utils.ns2sec;
 
 const test_input = Data.test_input;
 const input = Data.input;
@@ -13,11 +14,15 @@ pub fn main() !void {
     var gpa = GPA(.{}){};
     var alloc = gpa.allocator();
 
+    var T = try std.time.Timer.start();
+
     var res1 = try part1(input, alloc);
     std.debug.print("Part1: {d}\n", .{res1});
+    std.debug.print("Part 1 took {d:.6}s\n", .{ns2sec(T.lap())});
 
     var res2 = try part2(input, alloc);
     std.debug.print("Part2: {d}\n", .{res2});
+    std.debug.print("Part 2 took {d:.6}s\n", .{ns2sec(T.lap())});
 }
 
 // ------------ Tests ------------

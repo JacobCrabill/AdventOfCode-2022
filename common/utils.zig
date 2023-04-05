@@ -1,5 +1,22 @@
 const std = @import("std");
 
+// Convert timer value to seconds (float)
+pub fn ns2sec(nanos: u64) f64 {
+    return @intToFloat(f64, nanos) / 1.0e9;
+}
+
+pub fn Timer() !std.time.Timer {
+    return try std.time.Timer.start();
+}
+
+fn abs(T: anytype) @TypeOf(T) {
+    if (T < 0)
+        return -T
+    else
+        return T;
+}
+
+// Simple wrapper around std.io.getStdOut
 pub fn stdout(comptime fmt: []const u8, args: anytype) void {
     const out = std.io.getStdOut().writer();
     out.print(fmt, args) catch @panic("stdout failed!");
